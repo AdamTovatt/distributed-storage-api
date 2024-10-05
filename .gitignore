@@ -1,0 +1,10 @@
+.vs/
+/StorageClient/bin/*
+/StorageClient/obj/*
+/StorageShared/bin/*
+/StorageShared/obj/*
+/StorageCoordinator/bin/*
+/StorageCoordinator/obj/*
+/DistributedStorageApi/bin/*
+/DistributedStorageApi/obj/*
+/DistributedStorageApi/Properties/launchSettings.json
