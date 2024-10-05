@@ -1,8 +1,8 @@
 ﻿namespace StorageShared.Models
 {
-    public interface IMessageMetadata<T> where T : class
+    public interface IMessageMetadata
     {
-        public T FromJson(string json);
+        public static abstract IMessageMetadata FromJson(string json);
         public string ToJson();
     }
 }

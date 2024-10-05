@@ -87,7 +87,14 @@ namespace StorageClient
                             }
                             else if (message.Type == MessageType.StoreData)
                             {
-                                
+                                StoreFileMetadata storeFileMetadata = (StoreFileMetadata)StoreFileMetadata.FromJson(message.Metadata!);
+
+                                FileMode fileMode = File.Exists(storeFileMetadata.FileName) ? FileMode.Append : FileMode.Create;
+
+                                using (FileStream fileStream = new FileStream(storeFileMetadata.FileName, FileMode.Append))
+                                    fileStream.Write(message.Content, 0, message.Content.Length);
+
+                                logger.Log($"Stored part {storeFileMetadata.PartIndex + 1}/{storeFileMetadata.TotalParts} of file {storeFileMetadata.FileName}");
                             }
 
                             MessageReceived?.Invoke(message);
@@ -123,6 +130,7 @@ namespace StorageClient
                     catch (Exception exception)
                     {
                         logger.Log($"Error in receiving: {exception.Message}");
+                        logger.Log(exception.StackTrace?? "missing stack trace");
                     }
                 }
             }).Wait();

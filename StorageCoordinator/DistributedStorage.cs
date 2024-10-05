@@ -9,12 +9,23 @@ namespace StorageCoordinator
 {
     public class DistributedStorage
     {
+        public static DistributedStorage Instance { get { if (instance == null) throw new Exception("Distributed storage must be initialized before it is used!"); return instance; } }
+        private static DistributedStorage? instance;
+
         private StorageServer storageServer;
         private int chunkSize;
 
-        public DistributedStorage(StorageServer storageServer, int chunkSize = 1024)
+        public static DistributedStorage Initialize(StorageServer storageServer, int chunkSize = 1024)
+        {
+            instance = new DistributedStorage(storageServer, chunkSize);
+
+            return instance;
+        }
+
+        private DistributedStorage(StorageServer storageServer, int chunkSize = 1024)
         {
             this.storageServer = storageServer;
+            this.chunkSize = chunkSize;
         }
 
         public async Task<bool> StoreDataAsync(string fileName, Stream dataStream)
@@ -31,7 +42,7 @@ namespace StorageCoordinator
                     break;
                 }
 
-                StoreFileMetadata storeFileMetadata = new StoreFileMetadata(fileName, i, chunks);
+                StoreFileMetadata storeFileMetadata = new StoreFileMetadata(fileName, i, chunks, chunkSize);
 
                 await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
             }
