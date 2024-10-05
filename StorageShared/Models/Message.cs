@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Reflection.Metadata;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace StorageShared.Models
 {
@@ -13,44 +12,61 @@ namespace StorageShared.Models
         public MessageType Type { get; private set; }
         public int ContentLength { get; private set; }
         public byte[] Content { get; private set; }
+        public string? Metadata { get; set; }
 
-        public Message(MessageType type, int contentLength, byte[] content)
+        public Message(MessageType type, int contentLength, byte[] content, string? metadata)
         {
             Type = type;
             ContentLength = contentLength;
             Content = content;
+            Metadata = metadata;
         }
 
-        public Message(MessageType type, byte[] content)
+        public Message(MessageType type, byte[] content, string? metadata)
         {
             Type = type;
             Content = content;
             ContentLength = content.Length;
+            Metadata = metadata;
         }
 
         public static async Task<Message> ReadMessageAsync(MessageType messageType, NetworkStream stream)
         {
-            // first read the length
+            // first read the metadata length
+            byte[] metadataLengthBuffer = new byte[4];
+            await stream.ReadAsync(metadataLengthBuffer, 0, metadataLengthBuffer.Length);
+            int metadataLength = BitConverter.ToInt32(metadataLengthBuffer, 0);
+
+            // then read the content the length
             byte[] contentLengthBuffer = new byte[4];
             await stream.ReadAsync(contentLengthBuffer, 0, contentLengthBuffer.Length);
             int contentLength = BitConverter.ToInt32(contentLengthBuffer, 0);
+
+            // then read the amount of bytes that is the metadata
+            byte[] metadata = new byte[metadataLength];
+            await stream.ReadAsync(metadata, 0, metadata.Length);
 
             // then read that amount of bytes to the content
             byte[] content = new byte[contentLength];
             await stream.ReadAsync(content, 0, content.Length);
 
-            return new Message(messageType, content);
+            return new Message(messageType, content, Encoding.UTF8.GetString(metadata));
         }
 
         public async Task WriteMessageAsync(NetworkStream stream)
         {
             byte[] contentLengthBuffer = BitConverter.GetBytes(Content.Length);
 
-            byte[] totalMessage = new byte[1 + 4 + ContentLength]; // 1 byte for message type + 4 bytes for content length + content length
-            
+            byte[] metadataBytes = Metadata == null ? new byte[0] : Encoding.UTF8.GetBytes(Metadata);
+            byte[] metadataLengthBuffer = BitConverter.GetBytes(metadataBytes.Length);
+
+            byte[] totalMessage = new byte[1 + 4 + 4 + metadataBytes.Length + ContentLength]; // 1 byte for message type + 4 bytes for content length + 4 metadatabytes length
+
             totalMessage[0] = (byte)Type; // set the first byte to the message type
-            contentLengthBuffer.CopyTo(totalMessage, 1); // copy in the content length bytes
-            Content.CopyTo(totalMessage, 1 + contentLengthBuffer.Length); // copy in the content
+            metadataLengthBuffer.CopyTo(totalMessage, 1); // copy in the metadata length bytes
+            contentLengthBuffer.CopyTo(totalMessage, 1 + 4); // copy in the content length bytes
+            metadataBytes.CopyTo(totalMessage, 1 + 4 + 4); // copy in the metadata
+            Content.CopyTo(totalMessage, 1 + 4 + 4 + metadataBytes.Length); // copy in the content
 
             await stream.WriteAsync(totalMessage, 0, totalMessage.Length);
         }

@@ -4,6 +4,6 @@
     {
         NoMessage = 0,
         Utf8Encoded = 1,
-        ByteContent = 2,
+        StoreData = 2,
     }
 }

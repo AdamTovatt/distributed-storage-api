@@ -6,25 +6,25 @@ using System.Text;
 
 namespace StorageCoordinator
 {
-    public class TcpServer
+    public class StorageServer
     {
         public int Port { get; private set; }
         private TcpListener listener;
         private List<ConnectedClient> clients;
 
-        public TcpServer(int port)
+        public StorageServer(int port)
         {
             Port = port;
             clients = new List<ConnectedClient>();
             listener = new TcpListener(IPAddress.Any, Port);
         }
 
-        public void Start()
+        public void StartAcceptingConnections()
         {
             listener.Start();
         }
 
-        public async Task AcceptClients(CancellationToken? cancellationToken = null)
+        public async Task AcceptClientsAsync(CancellationToken? cancellationToken = null)
         {
             while (cancellationToken == null || !cancellationToken.Value.IsCancellationRequested)
             {
@@ -44,6 +44,19 @@ namespace StorageCoordinator
             {
                 client.Dispose();
             }
+        }
+
+        private void ClientAcceptingThreadstart()
+        {
+            Task.Run(async () =>
+            {
+                await AcceptClientsAsync();
+            }).Wait();
+        }
+
+        public Thread CreateClientAcceptingThread()
+        {
+            return new Thread(ClientAcceptingThreadstart);
         }
 
         public async Task Broadcast(Message message)
