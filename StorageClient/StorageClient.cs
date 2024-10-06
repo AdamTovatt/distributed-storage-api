@@ -89,12 +89,24 @@ namespace StorageClient
                             {
                                 StoreFileMetadata storeFileMetadata = (StoreFileMetadata)StoreFileMetadata.FromJson(message.Metadata!);
 
+                                if (storeFileMetadata.PartIndex == 0)
+                                {
+                                    if (File.Exists(storeFileMetadata.FileName))
+                                        File.Delete(storeFileMetadata.FileName);
+                                }
+
                                 FileMode fileMode = File.Exists(storeFileMetadata.FileName) ? FileMode.Append : FileMode.Create;
 
                                 using (FileStream fileStream = new FileStream(storeFileMetadata.FileName, FileMode.Append))
                                     fileStream.Write(message.Content, 0, message.Content.Length);
 
-                                logger.Log($"Stored part {storeFileMetadata.PartIndex + 1}/{storeFileMetadata.TotalParts} of file {storeFileMetadata.FileName}");
+                                if (storeFileMetadata.PartIndex == storeFileMetadata.TotalParts - 1)
+                                {
+                                    logger.Log($"File {storeFileMetadata.FileName} stored");
+
+                                    FileTransferResultMetadata resultMetadata = new FileTransferResultMetadata(storeFileMetadata.OperationId, true, "File stored");
+                                    await SendMessageAsync(new Message(MessageType.TransferDataResult, resultMetadata.ToJson()));
+                                }
                             }
 
                             MessageReceived?.Invoke(message);
@@ -130,7 +142,7 @@ namespace StorageClient
                     catch (Exception exception)
                     {
                         logger.Log($"Error in receiving: {exception.Message}");
-                        logger.Log(exception.StackTrace?? "missing stack trace");
+                        logger.Log(exception.StackTrace ?? "missing stack trace");
                     }
                 }
             }).Wait();

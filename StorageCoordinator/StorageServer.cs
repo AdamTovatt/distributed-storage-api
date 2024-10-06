@@ -1,5 +1,6 @@
 ﻿using StorageShared.Helpers;
 using StorageShared.Models;
+using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -8,9 +9,14 @@ namespace StorageCoordinator
 {
     public class StorageServer
     {
+        public delegate void MessageEventHandler(Message message);
+        public event MessageEventHandler? MessageReceived;
+
         public int Port { get; private set; }
         private TcpListener listener;
         private List<ConnectedClient> clients;
+
+        public ReadOnlyCollection<ConnectedClient> Clients => clients.AsReadOnly();
 
         public StorageServer(int port)
         {
@@ -90,13 +96,22 @@ namespace StorageCoordinator
 
                         if (messageType != MessageType.NoMessage)
                         {
-                            Message message = await Message.ReadMessageAsync(messageType, client.Stream);
-
-                            if (message.Type == MessageType.Utf8Encoded)
+                            try
                             {
-                                Console.WriteLine(message.GetContentAsString());
+                                Message message = await Message.ReadMessageAsync(messageType, client.Stream);
 
-                                await Broadcast(message);
+                                if (message.Type == MessageType.Utf8Encoded)
+                                {
+                                    Console.WriteLine(message.GetContentAsString());
+
+                                    await Broadcast(message);
+                                }
+
+                                MessageReceived?.Invoke(message);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e.Message);
                             }
                         }
                     }

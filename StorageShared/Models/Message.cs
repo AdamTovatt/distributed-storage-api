@@ -14,6 +14,14 @@ namespace StorageShared.Models
         public byte[] Content { get; private set; }
         public string? Metadata { get; set; }
 
+        public Message(MessageType type, string metadata)
+        {
+            Type = type;
+            Metadata = metadata;
+            Content = new byte[0];
+            ContentLength = 0;
+        }
+
         public Message(MessageType type, int contentLength, byte[] content, string? metadata)
         {
             Type = type;
@@ -44,11 +52,13 @@ namespace StorageShared.Models
 
             // then read the amount of bytes that is the metadata
             byte[] metadata = new byte[metadataLength];
-            await stream.ReadAsync(metadata, 0, metadata.Length);
+            if (metadataLength > 0)
+                await stream.ReadAsync(metadata, 0, metadata.Length);
 
             // then read that amount of bytes to the content
             byte[] content = new byte[contentLength];
-            await stream.ReadAsync(content, 0, content.Length);
+            if (contentLength > 0)
+                await stream.ReadAsync(content, 0, content.Length);
 
             return new Message(messageType, content, Encoding.UTF8.GetString(metadata));
         }

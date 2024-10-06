@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace StorageCoordinator
 {
-    internal class ConnectedClient
+    public class ConnectedClient
     {
         public NetworkStream Stream { get; set; }
         public TcpClient TcpClient { get; set; }

@@ -45,7 +45,7 @@ namespace DistributedStorageApi
             Thread storageServerThread = storageServer.CreateClientAcceptingThread();
             storageServerThread.Start();
 
-            distributedStorage = DistributedStorage.Initialize(storageServer);
+            distributedStorage = DistributedStorage.Initialize(storageServer, 5120);
         }
     }
 }

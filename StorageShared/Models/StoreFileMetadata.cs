@@ -8,13 +8,15 @@ namespace StorageShared.Models
         public int PartIndex { get; set; }
         public int TotalParts { get; set; }
         public int PartSize { get; set; }
+        public string OperationId { get; set; }
 
-        public StoreFileMetadata(string fileName, int partIndex, int totalParts, int partSize)
+        public StoreFileMetadata(string fileName, int partIndex, int totalParts, int partSize, string operationId)
         {
             FileName = fileName;
             PartIndex = partIndex;
             TotalParts = totalParts;
             PartSize = partSize;
+            OperationId = operationId;
         }
 
         public static IMessageMetadata FromJson(string json)

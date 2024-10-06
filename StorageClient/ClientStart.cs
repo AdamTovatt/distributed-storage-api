@@ -21,6 +21,8 @@ namespace StorageClient
                     logger.Log("Connecting to server...");
                     connected = await client.StartAsync();
 
+                    Console.WriteLine("Connected to server.\n");
+
                     if (!connected)
                     {
                         logger.Log("Failed to connect to server.");
@@ -30,15 +32,13 @@ namespace StorageClient
 
                 while (true)
                 {
-                    byte[] content = Encoding.UTF8.GetBytes(Console.ReadLine()!);
+                    await Task.Delay(100);
 
                     if (!client.Running)
                     {
-                        logger.Log("Client is not running, exiting...");
+                        logger.Log("Client is not running, exiting...\n");
                         break;
                     }
-
-                    await client.SendMessageAsync(new Message(MessageType.Utf8Encoded, content, "Tjo katt"));
                 }
             }
         }

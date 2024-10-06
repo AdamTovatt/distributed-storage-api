@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Sakur.WebApiUtilities.Models;
 using StorageCoordinator;
+using StorageCoordinator.Models;
 using System.Net;
 using System.Security.AccessControl;
 
@@ -16,9 +17,9 @@ namespace DistributedStorageApi.Controllers
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.Created)]
         public async Task<ObjectResult> StoreFile(IFormFile file)
         {
-            await DistributedStorage.Instance.StoreDataAsync(file.FileName, file.OpenReadStream());
+            StoreDataResult storeDataResult = await DistributedStorage.Instance.StoreDataAsync(file.FileName, file.OpenReadStream());
 
-            return new ApiResponse("ok", HttpStatusCode.Created);
+            return new ApiResponse(storeDataResult, HttpStatusCode.Created);
         }
     }
 }

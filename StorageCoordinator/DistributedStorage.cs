@@ -1,4 +1,5 @@
-﻿using StorageShared.Models;
+﻿using StorageCoordinator.Models;
+using StorageShared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,26 +29,66 @@ namespace StorageCoordinator
             this.chunkSize = chunkSize;
         }
 
-        public async Task<bool> StoreDataAsync(string fileName, Stream dataStream)
+        public async Task<StoreDataResult> StoreDataAsync(string fileName, Stream dataStream)
         {
-            int chunks = (int)Math.Ceiling((double)dataStream.Length / chunkSize);
+            string operationId = Guid.NewGuid().ToString();
 
-            for (int i = 0; i < chunks; i++)
+            List<FileTransferResultMetadata> results = new List<FileTransferResultMetadata>();
+
+            StorageServer.MessageEventHandler messageHandler = (Message message) =>
             {
-                byte[] data = new byte[chunkSize];
-                int bytesRead = await dataStream.ReadAsync(data, 0, chunkSize);
-
-                if (bytesRead == 0)
+                if (message.Type == MessageType.TransferDataResult)
                 {
-                    break;
+                    FileTransferResultMetadata metadata = (FileTransferResultMetadata)FileTransferResultMetadata.FromJson(message.Metadata!);
+
+                    if (metadata.OperationId == operationId)
+                        results.Add(metadata);
+                }
+            };
+
+            storageServer.MessageReceived += messageHandler;
+
+            try
+            {
+                int chunks = (int)Math.Ceiling((double)dataStream.Length / chunkSize);
+
+                for (int i = 0; i < chunks; i++)
+                {
+                    byte[] data = new byte[chunkSize];
+                    int bytesRead = await dataStream.ReadAsync(data, 0, chunkSize);
+
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+
+                    StoreFileMetadata storeFileMetadata = new StoreFileMetadata(fileName, i, chunks, chunkSize, operationId);
+
+                    await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
                 }
 
-                StoreFileMetadata storeFileMetadata = new StoreFileMetadata(fileName, i, chunks, chunkSize);
+                DateTime completedTime = DateTime.Now;
 
-                await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
+                while (results.Count < storageServer.Clients.Count)
+                {
+                    await Task.Delay(100);
+
+                    if (DateTime.Now - completedTime > TimeSpan.FromSeconds(10))
+                    {
+                        throw new TimeoutException("Timeout when waiting for all clients to respond");
+                    }
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                storageServer.MessageReceived -= messageHandler;
             }
 
-            return true;
+            return new StoreDataResult(results);
         }
     }
 }
