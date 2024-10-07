@@ -100,13 +100,13 @@ namespace StorageClient
 
                                 if (storeFileMetadata.PartIndex == 0)
                                 {
-                                    if (File.Exists(storeFileMetadata.FileName))
-                                        File.Delete(storeFileMetadata.FileName);
+                                    if (File.Exists(LocalizeFileName(storeFileMetadata.FileName)))
+                                        File.Delete(LocalizeFileName(storeFileMetadata.FileName));
                                 }
 
-                                FileMode fileMode = File.Exists(storeFileMetadata.FileName) ? FileMode.Append : FileMode.Create;
+                                FileMode fileMode = File.Exists(LocalizeFileName(storeFileMetadata.FileName)) ? FileMode.Append : FileMode.Create;
 
-                                using (FileStream fileStream = new FileStream(storeFileMetadata.FileName, FileMode.Append))
+                                using (FileStream fileStream = new FileStream(LocalizeFileName(storeFileMetadata.FileName), FileMode.Append))
                                     fileStream.Write(message.Content, 0, message.Content.Length);
 
                                 if (storeFileMetadata.PartIndex == storeFileMetadata.TotalParts - 1)
@@ -121,16 +121,16 @@ namespace StorageClient
                             {
                                 RetrieveFileMetadata retrieveFileMetadata = (RetrieveFileMetadata)RetrieveFileMetadata.FromJson(message.Metadata!);
 
-                                if (!File.Exists(retrieveFileMetadata.FileName))
+                                if (!File.Exists(LocalizeFileName(retrieveFileMetadata.FileName)))
                                 {
                                     FileTransferMetadata fileTransferMetadata = new FileTransferMetadata(retrieveFileMetadata.FileName, -1, -1, -1, retrieveFileMetadata.OperationId);
                                     await SendMessageAsync(new Message(MessageType.TransferDataResult, fileTransferMetadata.ToJson()));
                                 }
                                 else
                                 {
-                                    using (FileStream fileStream = new FileStream(retrieveFileMetadata.FileName, FileMode.Open))
+                                    using (FileStream fileStream = new FileStream(LocalizeFileName(retrieveFileMetadata.FileName), FileMode.Open))
                                     {
-                                        int chunks = (int)Math.Ceiling((double)new FileInfo(retrieveFileMetadata.FileName).Length / retrieveFileMetadata.ChunkSize);
+                                        int chunks = (int)Math.Ceiling((double)new FileInfo(LocalizeFileName(retrieveFileMetadata.FileName)).Length / retrieveFileMetadata.ChunkSize);
 
                                         for (int i = 0; i < chunks; i++)
                                         {
@@ -229,6 +229,11 @@ namespace StorageClient
                 throw new Exception("Can not send message without starting client first");
 
             await message.WriteMessageAsync(stream!);
+        }
+
+        private string LocalizeFileName(string fileName)
+        {
+            return Path.Combine(StoragePath, fileName);
         }
     }
 }
