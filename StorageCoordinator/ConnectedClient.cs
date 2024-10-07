@@ -1,4 +1,5 @@
-﻿using System;
+﻿using StorageShared.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -24,6 +25,11 @@ namespace StorageCoordinator
             Stream?.Dispose();
             TcpClient.Close();
             TcpClient?.Dispose();
+        }
+
+        public async Task SendMessageAsync(Message message)
+        {
+            await message.WriteMessageAsync(Stream);
         }
     }
 }

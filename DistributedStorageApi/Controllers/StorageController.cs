@@ -21,5 +21,18 @@ namespace DistributedStorageApi.Controllers
 
             return new ApiResponse(storeDataResult, HttpStatusCode.Created);
         }
+
+        [HttpGet("retrieve")]
+        [ProducesResponseType(typeof(FileStreamResult), (int)HttpStatusCode.OK)]
+        public async Task RetrieveFile(string fileName)
+        {
+            #pragma warning disable ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
+            Response.Headers.Add("Content-Type", "byte/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+            #pragma warning restore ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
+
+            RetrieveDataResult result = await DistributedStorage.Instance.RetrieveDataAsync(fileName, Response.Body, Response.HttpContext.RequestAborted);
+        }
     }
 }

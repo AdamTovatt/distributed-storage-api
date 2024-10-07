@@ -2,7 +2,7 @@
 
 namespace StorageShared.Models
 {
-    public class StoreFileMetadata : IMessageMetadata
+    public class FileTransferMetadata : IMessageMetadata
     {
         public string FileName { get; set; }
         public int PartIndex { get; set; }
@@ -10,7 +10,7 @@ namespace StorageShared.Models
         public int PartSize { get; set; }
         public string OperationId { get; set; }
 
-        public StoreFileMetadata(string fileName, int partIndex, int totalParts, int partSize, string operationId)
+        public FileTransferMetadata(string fileName, int partIndex, int totalParts, int partSize, string operationId)
         {
             FileName = fileName;
             PartIndex = partIndex;
@@ -21,7 +21,7 @@ namespace StorageShared.Models
 
         public static IMessageMetadata FromJson(string json)
         {
-            StoreFileMetadata? metadata = JsonSerializer.Deserialize<StoreFileMetadata>(json);
+            FileTransferMetadata? metadata = JsonSerializer.Deserialize<FileTransferMetadata>(json);
 
             if (metadata == null)
                 throw new JsonException($"Failed to deserialize StoreFileMetadata from json: {json}");

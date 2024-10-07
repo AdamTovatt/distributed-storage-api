@@ -6,5 +6,6 @@
         Utf8Encoded = 1,
         StoreData = 2,
         TransferDataResult = 3,
+        RetrieveData = 4,
     }
 }

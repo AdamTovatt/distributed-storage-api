@@ -87,7 +87,7 @@ namespace StorageClient
                             }
                             else if (message.Type == MessageType.StoreData)
                             {
-                                StoreFileMetadata storeFileMetadata = (StoreFileMetadata)StoreFileMetadata.FromJson(message.Metadata!);
+                                FileTransferMetadata storeFileMetadata = (FileTransferMetadata)FileTransferMetadata.FromJson(message.Metadata!);
 
                                 if (storeFileMetadata.PartIndex == 0)
                                 {
@@ -106,6 +106,38 @@ namespace StorageClient
 
                                     FileTransferResultMetadata resultMetadata = new FileTransferResultMetadata(storeFileMetadata.OperationId, true, "File stored");
                                     await SendMessageAsync(new Message(MessageType.TransferDataResult, resultMetadata.ToJson()));
+                                }
+                            }
+                            else if (message.Type == MessageType.RetrieveData)
+                            {
+                                RetrieveFileMetadata retrieveFileMetadata = (RetrieveFileMetadata)RetrieveFileMetadata.FromJson(message.Metadata!);
+
+                                if (!File.Exists(retrieveFileMetadata.FileName))
+                                {
+                                    FileTransferMetadata fileTransferMetadata = new FileTransferMetadata(retrieveFileMetadata.FileName, -1, -1, -1, retrieveFileMetadata.OperationId);
+                                    await SendMessageAsync(new Message(MessageType.TransferDataResult, fileTransferMetadata.ToJson()));
+                                }
+                                else
+                                {
+                                    using (FileStream fileStream = new FileStream(retrieveFileMetadata.FileName, FileMode.Open))
+                                    {
+                                        int chunks = (int)Math.Ceiling((double)new FileInfo(retrieveFileMetadata.FileName).Length / retrieveFileMetadata.ChunkSize);
+
+                                        for (int i = 0; i < chunks; i++)
+                                        {
+                                            byte[] data = new byte[retrieveFileMetadata.ChunkSize];
+                                            int bytesRead = fileStream.Read(data, 0, retrieveFileMetadata.ChunkSize);
+
+                                            if (bytesRead == 0)
+                                            {
+                                                break;
+                                            }
+
+                                            FileTransferMetadata fileTransferMetadata = new FileTransferMetadata(retrieveFileMetadata.FileName, i, chunks, retrieveFileMetadata.ChunkSize, retrieveFileMetadata.OperationId);
+
+                                            await SendMessageAsync(new Message(MessageType.TransferDataResult, data, fileTransferMetadata.ToJson()));
+                                        }
+                                    }
                                 }
                             }
 

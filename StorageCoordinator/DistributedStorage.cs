@@ -3,6 +3,7 @@ using StorageShared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,6 +28,72 @@ namespace StorageCoordinator
         {
             this.storageServer = storageServer;
             this.chunkSize = chunkSize;
+        }
+
+        public async Task<RetrieveDataResult> RetrieveDataAsync(string fileName, Stream dataStream, CancellationToken cancellationToken)
+        {
+            string operationId = Guid.NewGuid().ToString();
+
+            RetrieveFileMetadata retrieveFileMetadata = new RetrieveFileMetadata(operationId, fileName, chunkSize); // create message to start trasnfer from client
+            Message retrieveMessage = new Message(MessageType.RetrieveData, retrieveFileMetadata.ToJson());
+
+            ConnectedClient? connectedClient = storageServer.PrefferdClient; // get a client
+
+            if (connectedClient == null)
+                throw new Exception("No connected clients");
+
+            RetrieveDataResult? result = null;
+            int totalParts = -1;
+            int partsTransferred = 0;
+
+            StorageServer.MessageEventHandler messageHandler = (Message message) => // set up handling of transfer parts
+            {
+                if (message.Type == MessageType.TransferDataResult)
+                {
+                    FileTransferMetadata metadata = (FileTransferMetadata)FileTransferMetadata.FromJson(message.Metadata!);
+
+                    if (metadata.TotalParts == -1) // no file found
+                        result = new RetrieveDataResult(false, $"No such file: {fileName}", HttpStatusCode.NoContent);
+
+                    if (metadata.OperationId == operationId)
+                    {
+                        totalParts = metadata.TotalParts;
+                        partsTransferred++;
+                        dataStream.WriteAsync(message.Content, 0, message.Content.Length);
+                    }
+                }
+            };
+
+            storageServer.MessageReceived += messageHandler;
+
+            try
+            {
+                await connectedClient.SendMessageAsync(retrieveMessage); // start the transfer from the client
+
+                while (partsTransferred < totalParts || totalParts == -1) // wait for all parts to be transferred
+                {
+                    await Task.Delay(100);
+
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        storageServer.MessageReceived -= messageHandler;
+                        return new RetrieveDataResult(false, "Transfer was cancelled", HttpStatusCode.BadRequest);
+                    }
+
+                    if (result != null)
+                        return result;
+                }
+
+                return new RetrieveDataResult(true, "Transfer completed", HttpStatusCode.OK);
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                storageServer.MessageReceived -= messageHandler;
+            }
         }
 
         public async Task<StoreDataResult> StoreDataAsync(string fileName, Stream dataStream)
@@ -62,7 +129,7 @@ namespace StorageCoordinator
                         break;
                     }
 
-                    StoreFileMetadata storeFileMetadata = new StoreFileMetadata(fileName, i, chunks, chunkSize, operationId);
+                    FileTransferMetadata storeFileMetadata = new FileTransferMetadata(fileName, i, chunks, chunkSize, operationId);
 
                     await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
                 }

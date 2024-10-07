@@ -17,6 +17,7 @@ namespace StorageCoordinator
         private List<ConnectedClient> clients;
 
         public ReadOnlyCollection<ConnectedClient> Clients => clients.AsReadOnly();
+        public ConnectedClient? PrefferdClient { get { if (clients.Count == 0) return null; return clients[0]; } }
 
         public StorageServer(int port)
         {
