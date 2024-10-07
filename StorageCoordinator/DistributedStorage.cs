@@ -25,6 +25,18 @@ namespace StorageCoordinator
             this.chunkSize = chunkSize;
         }
 
+        public List<ClientInformation> GetOnlineClients()
+        {
+            List<ClientInformation> clients = new List<ClientInformation>();
+
+            foreach (ConnectedClient client in storageServer.Clients)
+            {
+                clients.Add(client.ClientInformation);
+            }
+
+            return clients;
+        }
+
         public async Task<RetrieveDataResult> RetrieveDataAsync(string fileName, Stream dataStream, CancellationToken cancellationToken)
         {
             string operationId = Guid.NewGuid().ToString();
@@ -108,6 +120,7 @@ namespace StorageCoordinator
                 }
             };
 
+            int onlineClients = storageServer.Clients.Count;
             storageServer.MessageReceived += messageHandler;
 
             try
@@ -150,7 +163,7 @@ namespace StorageCoordinator
                 storageServer.MessageReceived -= messageHandler;
             }
 
-            return new StoreDataResult(results);
+            return new StoreDataResult(results, onlineClients);
         }
 
         public async Task<GetStoredFileInfoResult> GetStoredFileInfoAsync(string fileName)

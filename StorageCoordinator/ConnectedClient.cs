@@ -1,22 +1,19 @@
 ﻿using StorageShared.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StorageCoordinator
 {
     public class ConnectedClient
     {
+        public ClientInformation ClientInformation { get; set; }
         public NetworkStream Stream { get; set; }
         public TcpClient TcpClient { get; set; }
 
-        public ConnectedClient(TcpClient client)
+        public ConnectedClient(TcpClient client, NetworkStream stream, ClientInformation clientInformation)
         {
-            Stream = client.GetStream();
+            Stream = stream;
             TcpClient = client;
+            ClientInformation = clientInformation;
         }
 
         public void Dispose()

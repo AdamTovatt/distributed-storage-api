@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sakur.WebApiUtilities.Models;
 using StorageCoordinator;
 using StorageCoordinator.Models;
+using StorageShared.Models;
 using System.Net;
 
 namespace DistributedStorageApi.Controllers
@@ -32,6 +33,19 @@ namespace DistributedStorageApi.Controllers
 #pragma warning restore ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
 
             RetrieveDataResult result = await DistributedStorage.Instance.RetrieveDataAsync(fileName, Response.Body, Response.HttpContext.RequestAborted);
+        }
+
+        [HttpGet("clients")]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        public ObjectResult GetClientsOnline()
+        {
+            List<ClientInformation> clientsOnline = DistributedStorage.Instance.GetOnlineClients();
+            List<string> names = new List<string>();
+
+            foreach (ClientInformation client in clientsOnline)
+                names.Add(client.Name);
+
+            return new ApiResponse(new { count = names.Count, names }, HttpStatusCode.OK);
         }
 
         [HttpGet("metadata")]

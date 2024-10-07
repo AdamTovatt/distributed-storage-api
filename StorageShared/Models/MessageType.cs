@@ -3,11 +3,12 @@
     public enum MessageType
     {
         NoMessage = 0,
-        Utf8Encoded = 1,
-        StoreData = 2,
-        TransferDataResult = 3,
-        RetrieveData = 4,
-        RetrieveFileInfoRequest = 5,
-        FileInfo = 6,
+        Authorization = 1,
+        Utf8Encoded = 2,
+        StoreData = 3,
+        TransferDataResult = 4,
+        RetrieveData = 5,
+        RetrieveFileInfoRequest = 6,
+        FileInfo = 7,
     }
 }

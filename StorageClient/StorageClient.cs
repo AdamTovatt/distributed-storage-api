@@ -20,8 +20,11 @@ namespace StorageClient
 
         private Logger logger;
 
+        public ClientInformation ClientInformation { get; private set; }
+
         public int Port { get; set; }
         public string HostName { get; set; }
+        public string StoragePath { get; set; }
 
         private TcpClient? client;
         private NetworkStream? stream;
@@ -29,8 +32,11 @@ namespace StorageClient
 
         private CancellationToken? cancellationToken;
 
-        public StorageClient(string hostName, int port, CancellationToken? cancellationToken = null, Logger? logger = null)
+        public StorageClient(ClientInformation clientInformation, string storagePath, string hostName, int port, CancellationToken? cancellationToken = null, Logger? logger = null)
         {
+            ClientInformation = clientInformation;
+
+            StoragePath = storagePath;
             Port = port;
             HostName = hostName;
             this.cancellationToken = cancellationToken;
@@ -56,6 +62,9 @@ namespace StorageClient
 
                 Thread handleIncommingMessagesThread = new Thread(HandleIncommingMessages);
                 handleIncommingMessagesThread.Start();
+
+                Message authorizationMessage = new Message(MessageType.Authorization, ClientInformation.ToJson());
+                await authorizationMessage.WriteMessageAsync(stream!);
             }
             catch (SocketException exception)
             {

@@ -78,77 +78,111 @@ namespace StorageCoordinator
             await Task.WhenAll(tasks);
         }
 
-        public void HandleClient(object? obj)
+        public async void HandleClient(object? obj)
         {
             if (obj == null) throw new Exception("Missing client object when handling client");
 
             TcpClient tcpClient = (TcpClient)obj;
 
-            ConnectedClient client = new ConnectedClient(tcpClient);
-            clients.Add(client);
-
-            Task.Run(async () =>
+            using (NetworkStream clientNetworkStream = tcpClient.GetStream())
             {
-                while (true)
-                {
-                    try
-                    {
-                        MessageType messageType = await client.Stream.ReadMessageTypeAsync();
+                ClientInformation? clientInformation = await ReadClientInformationAsync(clientNetworkStream);
 
-                        if (messageType != MessageType.NoMessage)
+                if (clientInformation == null)
+                {
+                    tcpClient.Close();
+                }
+                else
+                {
+                    ConnectedClient client = new ConnectedClient(tcpClient, clientNetworkStream, clientInformation);
+                    clients.Add(client);
+
+                    Task.Run(async () =>
+                    {
+                        while (true)
                         {
                             try
                             {
-                                Message message = await Message.ReadMessageAsync(messageType, client.Stream);
+                                MessageType messageType = await client.Stream.ReadMessageTypeAsync();
 
-                                if (message.Type == MessageType.Utf8Encoded)
+                                if (messageType != MessageType.NoMessage)
                                 {
-                                    Console.WriteLine(message.GetContentAsString());
+                                    try
+                                    {
+                                        Message message = await Message.ReadMessageAsync(messageType, client.Stream);
 
-                                    await Broadcast(message);
+                                        if (message.Type == MessageType.Utf8Encoded)
+                                        {
+                                            Console.WriteLine(message.GetContentAsString());
+
+                                            await Broadcast(message);
+                                        }
+
+                                        MessageReceived?.Invoke(message);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Console.WriteLine(e.Message);
+                                    }
                                 }
-
-                                MessageReceived?.Invoke(message);
                             }
-                            catch (Exception e)
+                            catch (IOException ioException)
                             {
-                                Console.WriteLine(e.Message);
-                            }
-                        }
-                    }
-                    catch (IOException ioException)
-                    {
-                        if (ioException.InnerException is SocketException socketException) // socket exceptions happen for example when the client disconnects
-                        {
-                            bool wasClientDisconnect =
-                                socketException.SocketErrorCode == SocketError.ConnectionReset ||
-                                socketException.SocketErrorCode == SocketError.ConnectionAborted ||
-                                socketException.SocketErrorCode == SocketError.Disconnecting;
+                                if (ioException.InnerException is SocketException socketException) // socket exceptions happen for example when the client disconnects
+                                {
+                                    bool wasClientDisconnect =
+                                        socketException.SocketErrorCode == SocketError.ConnectionReset ||
+                                        socketException.SocketErrorCode == SocketError.ConnectionAborted ||
+                                        socketException.SocketErrorCode == SocketError.Disconnecting;
 
 
-                            if (wasClientDisconnect) // client disconnected
-                            {
-                                Console.WriteLine("A client disconnected");
-                                break;
+                                    if (wasClientDisconnect) // client disconnected
+                                    {
+                                        Console.WriteLine("A client disconnected");
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"Socket error code: {socketException.SocketErrorCode}");
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"IOException: {ioException.Message}");
+                                }
                             }
-                            else
+                            catch (Exception exception)
                             {
-                                Console.WriteLine($"Socket error code: {socketException.SocketErrorCode}");
+                                Console.WriteLine($"Error in receiving: {exception.Message}");
                             }
                         }
-                        else
-                        {
-                            Console.WriteLine($"IOException: {ioException.Message}");
-                        }
-                    }
-                    catch (Exception exception)
-                    {
-                        Console.WriteLine($"Error in receiving: {exception.Message}");
-                    }
+                    }).Wait();
+
+                    client.Dispose();
+                    clients.Remove(client);
                 }
-            }).Wait();
+            }
+        }
 
-            clients.Remove(client);
+        public async Task<ClientInformation?> ReadClientInformationAsync(NetworkStream stream)
+        {
+            try
+            {
+                MessageType messageType = await stream.ReadMessageTypeAsync();
+
+                if (messageType != MessageType.Authorization)
+                    return null;
+
+                Message message = await Message.ReadMessageAsync(messageType, stream);
+                ClientInformation clientInformation = (ClientInformation)ClientInformation.FromJson(message.Metadata!);
+
+                return clientInformation;
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine($"Error when reading client information: {exception.Message}");
+                return null;
+            }
         }
     }
 }

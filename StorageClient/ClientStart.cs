@@ -1,6 +1,5 @@
 ﻿using StorageShared.Helpers;
 using StorageShared.Models;
-using System.Text;
 
 namespace StorageClient
 {
@@ -12,7 +11,15 @@ namespace StorageClient
             {
                 Logger logger = new Logger(true);
 
-                StorageClient client = new StorageClient("localhost", 25566, logger: logger);
+                ClientArguments? arguments = ClientArguments.ReadFromRuntTimeArguments(args, logger);
+                if (arguments == null)
+                {
+                    await Task.Delay(5000);
+                    return;
+                }
+
+                ClientInformation clientInformation = new ClientInformation(arguments.Name, arguments.ApiKey);
+                StorageClient client = new StorageClient(clientInformation, arguments.StoragePath, arguments.Host, arguments.Port, logger: logger);
 
                 bool connected = false;
 
