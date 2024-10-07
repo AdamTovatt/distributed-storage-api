@@ -1,11 +1,6 @@
 ﻿using StorageCoordinator.Models;
 using StorageShared.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StorageCoordinator
 {
@@ -156,6 +151,68 @@ namespace StorageCoordinator
             }
 
             return new StoreDataResult(results);
+        }
+
+        public async Task<GetStoredFileInfoResult> GetStoredFileInfoAsync(string fileName)
+        {
+            string operationId = Guid.NewGuid().ToString();
+
+            List<StoredFileInfo?> filesInfos = new List<StoredFileInfo?>();
+
+            GetStoredFileInfoMetadata messageMetadata = new GetStoredFileInfoMetadata(operationId, fileName);
+            Message messageToSend = new Message(MessageType.RetrieveFileInfoRequest, messageMetadata.ToJson());
+
+            StorageServer.MessageEventHandler responseHandler = (Message message) =>
+            {
+                if (message.Type == MessageType.FileInfo)
+                {
+                    ReturnFileInfoMetadata metadata = (ReturnFileInfoMetadata)ReturnFileInfoMetadata.FromJson(message.Metadata!);
+
+                    if (metadata.OperationId == operationId)
+                    {
+                        filesInfos.Add(metadata.FileInfo);
+                    }
+                }
+            };
+
+            storageServer.MessageReceived += responseHandler;
+
+            try
+            {
+                DateTime requestTime = DateTime.Now;
+                int clientCount = storageServer.Clients.Count;
+                await storageServer.Broadcast(messageToSend);
+
+                while (filesInfos.Count < clientCount)
+                {
+                    await Task.Delay(100);
+
+                    if (DateTime.Now - requestTime > TimeSpan.FromSeconds(10))
+                    {
+                        break;
+                    }
+                }
+
+                List<StoredFileInfo> resultList = new List<StoredFileInfo>();
+
+                foreach (StoredFileInfo? fileInfo in filesInfos)
+                {
+                    if (fileInfo != null)
+                        resultList.Add(fileInfo);
+                }
+
+                GetStoredFileInfoResult result = new GetStoredFileInfoResult(clientCount, resultList);
+
+                return result;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                storageServer.MessageReceived -= responseHandler;
+            }
         }
     }
 }

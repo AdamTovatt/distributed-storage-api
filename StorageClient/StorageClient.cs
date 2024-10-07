@@ -140,6 +140,32 @@ namespace StorageClient
                                     }
                                 }
                             }
+                            else if (message.Type == MessageType.RetrieveFileInfoRequest)
+                            {
+                                GetStoredFileInfoMetadata requestMetadata = (GetStoredFileInfoMetadata)GetStoredFileInfoMetadata.FromJson(message.Metadata!);
+
+                                StoredFileInfo? storedFileInfo = null;
+
+                                if (File.Exists(requestMetadata.FileName))
+                                {
+                                    long fileLength = -1;
+
+                                    using (FileStream fileStream = File.OpenRead(requestMetadata.FileName))
+                                    {
+                                        fileLength = fileStream.Length;
+                                    }
+
+                                    storedFileInfo = new StoredFileInfo(
+                                        requestMetadata.FileName,
+                                        File.GetCreationTimeUtc(requestMetadata.FileName),
+                                        fileLength,
+                                        ""
+                                        );
+                                }
+
+                                ReturnFileInfoMetadata returnMetadata = new ReturnFileInfoMetadata(requestMetadata.OperationId, storedFileInfo);
+                                await SendMessageAsync(new Message(MessageType.FileInfo, returnMetadata.ToJson()));
+                            }
 
                             MessageReceived?.Invoke(message);
                         }

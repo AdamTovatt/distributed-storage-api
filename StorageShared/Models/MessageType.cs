@@ -7,5 +7,7 @@
         StoreData = 2,
         TransferDataResult = 3,
         RetrieveData = 4,
+        RetrieveFileInfoRequest = 5,
+        FileInfo = 6,
     }
 }

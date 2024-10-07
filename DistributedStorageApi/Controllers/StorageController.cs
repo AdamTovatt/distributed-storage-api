@@ -5,7 +5,6 @@ using Sakur.WebApiUtilities.Models;
 using StorageCoordinator;
 using StorageCoordinator.Models;
 using System.Net;
-using System.Security.AccessControl;
 
 namespace DistributedStorageApi.Controllers
 {
@@ -26,13 +25,22 @@ namespace DistributedStorageApi.Controllers
         [ProducesResponseType(typeof(FileStreamResult), (int)HttpStatusCode.OK)]
         public async Task RetrieveFile(string fileName)
         {
-            #pragma warning disable ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
+#pragma warning disable ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
             Response.Headers.Add("Content-Type", "byte/event-stream");
             Response.Headers.Add("Cache-Control", "no-cache");
             Response.Headers.Add("Connection", "keep-alive");
-            #pragma warning restore ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
+#pragma warning restore ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
 
             RetrieveDataResult result = await DistributedStorage.Instance.RetrieveDataAsync(fileName, Response.Body, Response.HttpContext.RequestAborted);
+        }
+
+        [HttpGet("metadata")]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.OK)]
+        public async Task<ObjectResult> GetMetadataForFile(string fileName)
+        {
+            GetStoredFileInfoResult fileInfo = await DistributedStorage.Instance.GetStoredFileInfoAsync(fileName);
+
+            return new ApiResponse(fileInfo, HttpStatusCode.OK);
         }
     }
 }
