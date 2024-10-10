@@ -131,25 +131,8 @@ namespace StorageClient
                                 }
                                 else
                                 {
-                                    using (FileStream fileStream = new FileStream(LocalizeFileName(retrieveFileMetadata.FileName), FileMode.Open))
-                                    {
-                                        int chunks = (int)Math.Ceiling((double)new FileInfo(LocalizeFileName(retrieveFileMetadata.FileName)).Length / retrieveFileMetadata.ChunkSize);
-
-                                        for (int i = 0; i < chunks; i++)
-                                        {
-                                            byte[] data = new byte[retrieveFileMetadata.ChunkSize];
-                                            int bytesRead = fileStream.Read(data, 0, retrieveFileMetadata.ChunkSize);
-
-                                            if (bytesRead == 0)
-                                            {
-                                                break;
-                                            }
-
-                                            FileTransferMetadata fileTransferMetadata = new FileTransferMetadata(retrieveFileMetadata.FileName, i, chunks, retrieveFileMetadata.ChunkSize, retrieveFileMetadata.OperationId);
-
-                                            await SendMessageAsync(new Message(MessageType.TransferDataResult, data, fileTransferMetadata.ToJson()));
-                                        }
-                                    }
+                                    Thread retrieveFileThread = new Thread(new ParameterizedThreadStart(RetrieveFileThread));
+                                    retrieveFileThread.Start(retrieveFileMetadata);
                                 }
                             }
                             else if (message.Type == MessageType.RetrieveFileInfoRequest)
@@ -158,13 +141,13 @@ namespace StorageClient
 
                                 StoredFileInfo? storedFileInfo = null;
 
-                                if (File.Exists(requestMetadata.FileName))
+                                if (File.Exists(LocalizeFileName(requestMetadata.FileName)))
                                 {
                                     long fileLength = -1;
                                     string? hash = null;
 
                                     using (MD5 md5 = MD5.Create())
-                                    using (FileStream fileStream = File.OpenRead(requestMetadata.FileName))
+                                    using (FileStream fileStream = File.OpenRead(LocalizeFileName(requestMetadata.FileName)))
                                     {
                                         fileLength = fileStream.Length;
 
@@ -226,6 +209,34 @@ namespace StorageClient
 
             Disconnected?.Invoke();
             Stop();
+        }
+
+        private void RetrieveFileThread(object? retrieveFileMetadataObject)
+        {
+            RetrieveFileMetadata retrieveFileMetadata = (RetrieveFileMetadata)retrieveFileMetadataObject!;
+
+            Task.Run(async () =>
+            {
+                using (FileStream fileStream = new FileStream(LocalizeFileName(retrieveFileMetadata.FileName), FileMode.Open))
+                {
+                    int chunks = (int)Math.Ceiling((double)new FileInfo(LocalizeFileName(retrieveFileMetadata.FileName)).Length / retrieveFileMetadata.ChunkSize);
+
+                    for (int i = 0; i < chunks; i++)
+                    {
+                        byte[] data = new byte[retrieveFileMetadata.ChunkSize];
+                        int bytesRead = fileStream.Read(data, 0, retrieveFileMetadata.ChunkSize);
+
+                        if (bytesRead == 0)
+                        {
+                            break;
+                        }
+
+                        FileTransferMetadata fileTransferMetadata = new FileTransferMetadata(retrieveFileMetadata.FileName, i, chunks, retrieveFileMetadata.ChunkSize, retrieveFileMetadata.OperationId);
+
+                        await SendMessageAsync(new Message(MessageType.TransferDataResult, data, fileTransferMetadata.ToJson()));
+                    }
+                }
+            }).Wait();
         }
 
         public void Stop()
