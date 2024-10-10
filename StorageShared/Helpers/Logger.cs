@@ -13,7 +13,7 @@
         {
             if (Enabled)
             {
-                Console.WriteLine(message);
+                Console.WriteLine($"{DateTime.Now}: {message}");
             }
         }
     }

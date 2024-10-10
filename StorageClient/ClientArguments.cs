@@ -19,7 +19,7 @@ namespace StorageClient
             Port = serverPort;
         }
 
-        internal static ClientArguments? ReadFromRuntTimeArguments(string[] args, Logger logger)
+        internal static ClientArguments? ReadFromRuntimeArguments(string[] args, Logger logger)
         {
             Dictionary<string, string> parsedArguments = RuntimeArgumentsReader.CreateDictionary(args);
 

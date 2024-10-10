@@ -2,9 +2,11 @@
 using StorageShared.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection.Metadata;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -94,7 +96,7 @@ namespace StorageClient
                             {
                                 logger.Log($"Got message: {message.GetContentAsString()}");
                             }
-                            else if (message.Type == MessageType.StoreData)
+                            else if (message.Type == MessageType.StoreData) // store data
                             {
                                 FileTransferMetadata storeFileMetadata = (FileTransferMetadata)FileTransferMetadata.FromJson(message.Metadata!);
 
@@ -113,11 +115,12 @@ namespace StorageClient
                                 {
                                     logger.Log($"File {storeFileMetadata.FileName} stored");
 
-                                    FileTransferResultMetadata resultMetadata = new FileTransferResultMetadata(storeFileMetadata.OperationId, true, "File stored");
+                                    string fileHash = await FileHash.GetAsStringAsync(LocalizeFileName(storeFileMetadata.FileName));
+                                    FileTransferResultMetadata resultMetadata = new FileTransferResultMetadata(storeFileMetadata.OperationId, true, "File stored", fileHash);
                                     await SendMessageAsync(new Message(MessageType.TransferDataResult, resultMetadata.ToJson()));
                                 }
                             }
-                            else if (message.Type == MessageType.RetrieveData)
+                            else if (message.Type == MessageType.RetrieveData) // retrieve data
                             {
                                 RetrieveFileMetadata retrieveFileMetadata = (RetrieveFileMetadata)RetrieveFileMetadata.FromJson(message.Metadata!);
 
@@ -158,17 +161,24 @@ namespace StorageClient
                                 if (File.Exists(requestMetadata.FileName))
                                 {
                                     long fileLength = -1;
+                                    string? hash = null;
 
+                                    using (MD5 md5 = MD5.Create())
                                     using (FileStream fileStream = File.OpenRead(requestMetadata.FileName))
                                     {
                                         fileLength = fileStream.Length;
+
+                                        await Task.Run(() =>
+                                        {
+                                            hash = md5.GetHashAsString(fileStream);
+                                        });
                                     }
 
                                     storedFileInfo = new StoredFileInfo(
                                         requestMetadata.FileName,
                                         File.GetCreationTimeUtc(requestMetadata.FileName),
                                         fileLength,
-                                        ""
+                                        hash ?? "missing file hash"
                                         );
                                 }
 

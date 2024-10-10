@@ -12,12 +12,14 @@ namespace StorageShared.Models
         public string OperationId { get; set; }
         public bool Success { get; set; }
         public string Message { get; set; }
+        public string Hash { get; set; }
 
-        public FileTransferResultMetadata(string operationId, bool success, string message)
+        public FileTransferResultMetadata(string operationId, bool success, string message, string hash)
         {
             OperationId = operationId;
             Success = success;
             Message = message;
+            Hash = hash;
         }
 
         public static IMessageMetadata FromJson(string json)

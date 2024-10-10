@@ -1,5 +1,7 @@
 ﻿using StorageShared.Models;
+using System.IO;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 
 namespace StorageShared.Helpers
 {
@@ -18,6 +20,23 @@ namespace StorageShared.Helpers
             }
 
             return type;
+        }
+
+        public static string GetHashAsString(this MD5 md5, Stream stream)
+        {
+            byte[] hashBytes = md5.ComputeHash(stream);
+            return hashBytes.GetAsString();
+        }
+
+        public static string GetHashAsString(this MD5 md5)
+        {
+            byte[] hashBytes = md5.Hash!;
+            return hashBytes.GetAsString();
+        }
+
+        private static string GetAsString(this byte[] bytes)
+        {
+            return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
         }
     }
 }

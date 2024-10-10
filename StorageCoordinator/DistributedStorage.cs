@@ -1,6 +1,8 @@
 ﻿using StorageCoordinator.Models;
+using StorageShared.Helpers;
 using StorageShared.Models;
 using System.Net;
+using System.Security.Cryptography;
 
 namespace StorageCoordinator
 {
@@ -106,6 +108,9 @@ namespace StorageCoordinator
         public async Task<StoreDataResult> StoreDataAsync(string fileName, Stream dataStream)
         {
             string operationId = Guid.NewGuid().ToString();
+            string? transferredDataHash = null;
+            long fileLength = dataStream.Length;
+            long bytesSent = 0;
 
             List<FileTransferResultMetadata> results = new List<FileTransferResultMetadata>();
 
@@ -126,20 +131,31 @@ namespace StorageCoordinator
             try
             {
                 int chunks = (int)Math.Ceiling((double)dataStream.Length / chunkSize);
+                byte[] data = new byte[chunkSize];
 
-                for (int i = 0; i < chunks; i++)
+                bytesSent = chunks * chunkSize;
+
+                using (MD5 md5 = MD5.Create())
                 {
-                    byte[] data = new byte[chunkSize];
-                    int bytesRead = await dataStream.ReadAsync(data, 0, chunkSize);
-
-                    if (bytesRead == 0)
+                    for (int i = 0; i < chunks; i++)
                     {
-                        break;
+                        int bytesRead = await dataStream.ReadAsync(data, 0, chunkSize);
+
+                        if (bytesRead == 0)
+                            break;
+
+                        if (bytesRead < chunkSize)
+                            Array.Clear(data, bytesRead, chunkSize - bytesRead); // clear the rest of the buffer (if not filled with data)
+
+                        md5.TransformBlock(data, 0, data.Length, null, 0);
+
+                        FileTransferMetadata storeFileMetadata = new FileTransferMetadata(fileName, i, chunks, chunkSize, operationId);
+
+                        await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
                     }
 
-                    FileTransferMetadata storeFileMetadata = new FileTransferMetadata(fileName, i, chunks, chunkSize, operationId);
-
-                    await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
+                    md5.TransformFinalBlock(Array.Empty<byte>(), 0, 0); // Finalize the hash
+                    transferredDataHash = md5.GetHashAsString();
                 }
 
                 DateTime completedTime = DateTime.Now;
@@ -163,7 +179,7 @@ namespace StorageCoordinator
                 storageServer.MessageReceived -= messageHandler;
             }
 
-            return new StoreDataResult(results, onlineClients);
+            return new StoreDataResult(results, onlineClients, transferredDataHash, fileLength, bytesSent);
         }
 
         public async Task<GetStoredFileInfoResult> GetStoredFileInfoAsync(string fileName)

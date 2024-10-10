@@ -11,7 +11,7 @@ namespace StorageClient
             {
                 Logger logger = new Logger(true);
 
-                ClientArguments? arguments = ClientArguments.ReadFromRuntTimeArguments(args, logger);
+                ClientArguments? arguments = ClientArguments.ReadFromRuntimeArguments(args, logger);
                 if (arguments == null)
                 {
                     await Task.Delay(5000);
@@ -33,7 +33,7 @@ namespace StorageClient
                     if (!connected)
                     {
                         logger.Log("Failed to connect to server.");
-                        await Task.Delay(1000);
+                        await Task.Delay(5000);
                     }
                 }
 
