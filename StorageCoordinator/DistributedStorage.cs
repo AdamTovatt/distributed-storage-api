@@ -133,8 +133,6 @@ namespace StorageCoordinator
                 int chunks = (int)Math.Ceiling((double)dataStream.Length / chunkSize);
                 byte[] data = new byte[chunkSize];
 
-                bytesSent = chunks * chunkSize;
-
                 using (MD5 md5 = MD5.Create())
                 {
                     for (int i = 0; i < chunks; i++)
@@ -144,14 +142,15 @@ namespace StorageCoordinator
                         if (bytesRead == 0)
                             break;
 
-                        if (bytesRead < chunkSize)
-                            Array.Clear(data, bytesRead, chunkSize - bytesRead); // clear the rest of the buffer (if not filled with data)
+                        if (bytesRead < chunkSize) // if we read less than the chunk size we are at the last chunk and then we want to make the array smaller
+                            data = data.Take(bytesRead).ToArray();
 
-                        md5.TransformBlock(data, 0, data.Length, null, 0);
+                        md5.TransformBlock(data, 0, bytesRead, null, 0);
 
                         FileTransferMetadata storeFileMetadata = new FileTransferMetadata(fileName, i, chunks, chunkSize, operationId);
 
                         await storageServer.Broadcast(new Message(MessageType.StoreData, data, storeFileMetadata.ToJson()));
+                        bytesSent += data.Length;
                     }
 
                     md5.TransformFinalBlock(Array.Empty<byte>(), 0, 0); // Finalize the hash
