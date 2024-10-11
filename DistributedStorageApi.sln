@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34525.116
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DistributedStorageApi", "DistributedStorageApi\DistributedStorageApi.csproj", "{C906AF58-9A4E-4D83-8AC5-430F57657856}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DistributedStorageApi", "DistributedStorageApi\DistributedStorageApi.csproj", "{C906AF58-9A4E-4D83-8AC5-430F57657856}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageClient", "StorageClient\StorageClient.csproj", "{20D5E8DD-EB68-47E4-A972-6D5E6FB21BCC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageClient", "StorageClient\StorageClient.csproj", "{20D5E8DD-EB68-47E4-A972-6D5E6FB21BCC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageCoordinator", "StorageCoordinator\StorageCoordinator.csproj", "{59871693-20DD-4594-8B20-A963A4A2A12E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageCoordinator", "StorageCoordinator\StorageCoordinator.csproj", "{59871693-20DD-4594-8B20-A963A4A2A12E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageShared", "StorageShared\StorageShared.csproj", "{192FE216-ACCF-4D6F-A9A7-984B943DD549}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageShared", "StorageShared\StorageShared.csproj", "{192FE216-ACCF-4D6F-A9A7-984B943DD549}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoUpdater", "AutoUpdater\AutoUpdater.csproj", "{152F91A4-8C02-4BA5-89AD-913B29C04811}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{192FE216-ACCF-4D6F-A9A7-984B943DD549}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{192FE216-ACCF-4D6F-A9A7-984B943DD549}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{192FE216-ACCF-4D6F-A9A7-984B943DD549}.Release|Any CPU.Build.0 = Release|Any CPU
+		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -8,3 +8,5 @@
 /DistributedStorageApi/bin/*
 /DistributedStorageApi/obj/*
 /DistributedStorageApi/Properties/launchSettings.json
+/AutoUpdater/bin/*
+/AutoUpdater/obj/*
