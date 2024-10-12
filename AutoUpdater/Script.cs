@@ -87,6 +87,25 @@ namespace AutoUpdater
                         break;
                     }
                 }
+                else if (command.FileName.ToLower() == "contains")
+                {
+                    if(!outputs.Last().Contains(command.Arguments))
+                    {
+                        string commandOutput = $"Encountered contains command that required the last command output to contain: {command.Arguments}";
+                        string commandOutput2 = "contains command condition was not met, breaking";
+
+                        if (commandLogger != null)
+                        {
+                            commandLogger.Log(commandOutput);
+                            commandLogger.Log(commandOutput2);
+                        }
+
+                        outputs.Add(commandOutput);
+                        outputs.Add(commandOutput2);
+
+                        break;
+                    }
+                }
                 else
                 {
                     string commandOutput = await command.RunAsync(timeOut);
