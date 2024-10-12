@@ -19,7 +19,7 @@ namespace AutoUpdater
 
             ConsoleLogger logger = new ConsoleLogger(logging);
 
-            Script script = Script.CreateFromString(arguments["script-path"]);
+            Script script = Script.CreateFromFile(arguments["script-path"]);
             await script.RunAsync(commandLogger: logger);
 
             logger.Log("Completed running script.");
