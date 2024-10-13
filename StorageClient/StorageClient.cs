@@ -53,10 +53,20 @@ namespace StorageClient
         {
             try
             {
-                await Task.Run(() =>
+                client = new TcpClient();
+
+                using (CancellationTokenSource tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                 {
-                    client = new TcpClient(HostName, Port);
-                });
+                    try
+                    {
+                        await client.ConnectAsync(HostName, Port, tokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        logger.Log($"Connection attempt timed out");
+                        return false;
+                    }
+                }
 
                 stream = client?.GetStream();
 
@@ -71,7 +81,6 @@ namespace StorageClient
             catch (SocketException exception)
             {
                 logger.Log($"Error when connecting to server: {exception.Message}");
-
                 return false;
             }
 
@@ -252,6 +261,21 @@ namespace StorageClient
         public void Stop()
         {
             Running = false;
+        }
+
+        public void Dispose()
+        {
+            if (stream != null)
+            {
+                stream.Close();
+                stream.Dispose();
+            }
+
+            if (client != null)
+            {
+                client.Close();
+                client.Dispose();
+            }
         }
 
         public async Task SendMessageAsync(Message message)

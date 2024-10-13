@@ -7,30 +7,31 @@ namespace StorageClient
     {
         static async Task Main(string[] args)
         {
+            Logger logger = new Logger(true);
+
+            ClientArguments? arguments = ClientArguments.ReadFromRuntimeArguments(args, logger);
+            if (arguments == null)
+            {
+                await Task.Delay(5000);
+                return;
+            }
+
+            ClientInformation clientInformation = new ClientInformation(arguments.Name, arguments.ApiKey);
+
             while (true)
             {
-                Logger logger = new Logger(true);
-
-                ClientArguments? arguments = ClientArguments.ReadFromRuntimeArguments(args, logger);
-                if (arguments == null)
-                {
-                    await Task.Delay(5000);
-                    return;
-                }
-
-                ClientInformation clientInformation = new ClientInformation(arguments.Name, arguments.ApiKey);
                 StorageClient client = new StorageClient(clientInformation, arguments.StoragePath, arguments.Host, arguments.Port, logger: logger);
 
-                bool connected = false;
-
-                while (!connected)
+                while (true)
                 {
-                    logger.Log("Connecting to server...");
-                    connected = await client.StartAsync();
+                    logger.Log($"Connecting to server at {client.HostName}:{client.Port}");
 
-                    Console.WriteLine("Connected to server.\n");
-
-                    if (!connected)
+                    if (await client.StartAsync())
+                    {
+                        logger.Log("Connected successfully.");
+                        break;
+                    }
+                    else
                     {
                         logger.Log("Failed to connect to server.");
                         await Task.Delay(5000);
@@ -39,11 +40,12 @@ namespace StorageClient
 
                 while (true)
                 {
-                    await Task.Delay(100);
+                    await Task.Delay(500);
 
                     if (!client.Running)
                     {
-                        logger.Log("Client is not running, exiting...\n");
+                        logger.Log("Connection to server has been lost, restarting");
+                        client.Dispose();
                         break;
                     }
                 }
