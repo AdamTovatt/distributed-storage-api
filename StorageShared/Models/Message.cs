@@ -42,48 +42,48 @@ namespace StorageShared.Models
 
         public static async Task<Message> ReadMessageAsync(MessageType messageType, NetworkStream stream)
         {
-            // first read the metadata length
-            byte[] metadataLengthBuffer = new byte[4];
-            await stream.ReadAsync(metadataLengthBuffer, 0, metadataLengthBuffer.Length);
-            int metadataLength = BitConverter.ToInt32(metadataLengthBuffer, 0);
-
-            // then read the content the length
-            byte[] contentLengthBuffer = new byte[4];
-            await stream.ReadAsync(contentLengthBuffer, 0, contentLengthBuffer.Length);
-            int contentLength = BitConverter.ToInt32(contentLengthBuffer, 0);
-
-            // then read the amount of bytes that is the metadata
-            byte[] metadata = new byte[metadataLength];
-            if (metadataLength > 0)
-                await stream.ReadAsync(metadata, 0, metadata.Length);
-
-            // then read that amount of bytes to the content
-            byte[] content = new byte[contentLength];
-            if (contentLength > 0)
-                await stream.ReadAsync(content, 0, content.Length);
-
-            using (MD5 md5 = MD5.Create())
+            using (CancellationTokenSource cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
             {
-                md5.TransformBlock(new byte[] { (byte)messageType }, 0, 1, null, 0);
-                md5.TransformBlock(metadataLengthBuffer, 0, 4, null, 0);
-                md5.TransformBlock(contentLengthBuffer, 0, 4, null, 0);
-                md5.TransformBlock(metadata, 0, metadata.Length, null, 0);
-                md5.TransformBlock(content, 0, content.Length, null, 0);
-                md5.TransformFinalBlock(new byte[16], 0, 16);
+                // first read the metadata length
+                byte[] metadataLengthBuffer = new byte[4];
+                await stream.ReadExactlyAsync(metadataLengthBuffer, 0, metadataLengthBuffer.Length, cancellationTokenSource.Token);
+                int metadataLength = BitConverter.ToInt32(metadataLengthBuffer, 0);
 
-                byte[] computedMessageHash = md5.Hash!;
-                byte[] readMessageHash = new byte[16];
+                // then read the content the length
+                byte[] contentLengthBuffer = new byte[4];
+                await stream.ReadExactlyAsync(contentLengthBuffer, 0, contentLengthBuffer.Length, cancellationTokenSource.Token);
+                int contentLength = BitConverter.ToInt32(contentLengthBuffer, 0);
 
-                await stream.ReadAsync(readMessageHash, 0, readMessageHash.Length);
+                // then read the amount of bytes that is the metadata
+                byte[] metadata = new byte[metadataLength];
+                if (metadataLength > 0)
+                    await stream.ReadExactlyAsync(metadata, 0, metadata.Length, cancellationTokenSource.Token);
 
-                Console.WriteLine($"Computed hash: {computedMessageHash.GetAsString()}");
-                Console.WriteLine($"Read hash: {readMessageHash.GetAsString()}");
+                // then read that amount of bytes to the content
+                byte[] content = new byte[contentLength];
+                if (contentLength > 0)
+                    await stream.ReadExactlyAsync(content, 0, content.Length, cancellationTokenSource.Token);
 
-                if (!computedMessageHash.SequenceEqual(readMessageHash))
-                    throw new Exception("Message hash does not match");
+                using (MD5 md5 = MD5.Create())
+                {
+                    md5.TransformBlock(new byte[] { (byte)messageType }, 0, 1, null, 0);
+                    md5.TransformBlock(metadataLengthBuffer, 0, 4, null, 0);
+                    md5.TransformBlock(contentLengthBuffer, 0, 4, null, 0);
+                    md5.TransformBlock(metadata, 0, metadata.Length, null, 0);
+                    md5.TransformBlock(content, 0, content.Length, null, 0);
+                    md5.TransformFinalBlock(new byte[16], 0, 16);
+
+                    byte[] computedMessageHash = md5.Hash!;
+                    byte[] readMessageHash = new byte[16];
+
+                    await stream.ReadExactlyAsync(readMessageHash, 0, readMessageHash.Length, cancellationTokenSource.Token);
+
+                    if (!computedMessageHash.SequenceEqual(readMessageHash))
+                        throw new Exception("Message hash does not match");
+                }
+
+                return new Message(messageType, content, Encoding.UTF8.GetString(metadata));
             }
-
-            return new Message(messageType, content, Encoding.UTF8.GetString(metadata));
         }
 
         public async Task WriteMessageAsync(NetworkStream stream)
