@@ -234,6 +234,8 @@ namespace StorageClient
                         FileTransferMetadata fileTransferMetadata = new FileTransferMetadata(retrieveFileMetadata.FileName, i, chunks, retrieveFileMetadata.ChunkSize, retrieveFileMetadata.OperationId);
 
                         await SendMessageAsync(new Message(MessageType.TransferDataResult, data, fileTransferMetadata.ToJson()));
+
+                        logger.Log($"{retrieveFileMetadata.FileName}: sent part: {i}");
                     }
                 }
             }).Wait();

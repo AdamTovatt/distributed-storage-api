@@ -78,6 +78,7 @@ namespace StorageCoordinator
             try
             {
                 await connectedClient.SendMessageAsync(retrieveMessage); // start the transfer from the client
+                DateTime startTime = DateTime.Now;
 
                 while (partsTransferred < totalParts || totalParts == -1) // wait for all parts to be transferred
                 {
@@ -91,6 +92,9 @@ namespace StorageCoordinator
 
                     if (result != null)
                         return result;
+
+                    //if (DateTime.Now - startTime > TimeSpan.FromSeconds(10))
+                    //    return new RetrieveDataResult(false, "Error with transfer", HttpStatusCode.InternalServerError);
                 }
 
                 return new RetrieveDataResult(true, "Transfer completed", HttpStatusCode.OK);
