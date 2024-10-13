@@ -76,7 +76,7 @@ namespace StorageShared.Models
                     byte[] computedMessageHash = md5.Hash!;
                     byte[] readMessageHash = new byte[16];
 
-                    await stream.ReadExactlyAsync(readMessageHash, 0, readMessageHash.Length, cancellationTokenSource.Token);
+                    await stream.ReadExactlyAsync(readMessageHash, 0, 16, cancellationTokenSource.Token);
 
                     if (!computedMessageHash.SequenceEqual(readMessageHash))
                         throw new Exception("Message hash does not match");
