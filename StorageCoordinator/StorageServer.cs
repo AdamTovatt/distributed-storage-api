@@ -103,7 +103,17 @@ namespace StorageCoordinator
                         {
                             try
                             {
-                                MessageType messageType = await client.Stream.ReadMessageTypeAsync();
+                                ReadMessageTypeResult readMessageTypeResult = await client.Stream.ReadMessageTypeAsync();
+
+                                if (!readMessageTypeResult.Valid)
+                                {
+                                    Console.WriteLine($"Invalid message type: {readMessageTypeResult.RawValue}");
+                                    continue;
+                                }
+                                else
+                                    Console.WriteLine($"Message type: {readMessageTypeResult.RawValue}");
+
+                                MessageType messageType = readMessageTypeResult.MessageType!.Value;
 
                                 if (messageType != MessageType.NoMessage)
                                 {
@@ -168,12 +178,13 @@ namespace StorageCoordinator
         {
             try
             {
-                MessageType messageType = await stream.ReadMessageTypeAsync();
+                ReadMessageTypeResult readMessageTypeResult = await stream.ReadMessageTypeAsync();
 
-                if (messageType != MessageType.Authorization)
+                MessageType? messageType = readMessageTypeResult.MessageType;
+                if (messageType == null || readMessageTypeResult.MessageType != MessageType.Authorization)
                     return null;
 
-                Message message = await Message.ReadMessageAsync(messageType, stream);
+                Message message = await Message.ReadMessageAsync(messageType!.Value, stream);
                 ClientInformation clientInformation = (ClientInformation)ClientInformation.FromJson(message.Metadata!);
 
                 return clientInformation;

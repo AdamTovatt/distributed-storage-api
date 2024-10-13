@@ -1,8 +1,10 @@
-﻿using System;
+﻿using StorageShared.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection.Metadata;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace StorageShared.Models
@@ -60,6 +62,27 @@ namespace StorageShared.Models
             if (contentLength > 0)
                 await stream.ReadAsync(content, 0, content.Length);
 
+            using (MD5 md5 = MD5.Create())
+            {
+                md5.TransformBlock(new byte[] { (byte)messageType }, 0, 1, null, 0);
+                md5.TransformBlock(metadataLengthBuffer, 0, 4, null, 0);
+                md5.TransformBlock(contentLengthBuffer, 0, 4, null, 0);
+                md5.TransformBlock(metadata, 0, metadata.Length, null, 0);
+                md5.TransformBlock(content, 0, content.Length, null, 0);
+                md5.TransformFinalBlock(new byte[16], 0, 16);
+
+                byte[] computedMessageHash = md5.Hash!;
+                byte[] readMessageHash = new byte[16];
+
+                await stream.ReadAsync(readMessageHash, 0, readMessageHash.Length);
+
+                Console.WriteLine($"Computed hash: {computedMessageHash.GetAsString()}");
+                Console.WriteLine($"Read hash: {readMessageHash.GetAsString()}");
+
+                if (!computedMessageHash.SequenceEqual(readMessageHash))
+                    throw new Exception("Message hash does not match");
+            }
+
             return new Message(messageType, content, Encoding.UTF8.GetString(metadata));
         }
 
@@ -70,7 +93,8 @@ namespace StorageShared.Models
             byte[] metadataBytes = Metadata == null ? new byte[0] : Encoding.UTF8.GetBytes(Metadata);
             byte[] metadataLengthBuffer = BitConverter.GetBytes(metadataBytes.Length);
 
-            byte[] totalMessage = new byte[1 + 4 + 4 + metadataBytes.Length + ContentLength]; // 1 byte for message type + 4 bytes for content length + 4 metadatabytes length
+            // 1 byte for message type + 4 bytes for content length + 4 metadatabytes length + the lenght of the metadata + the lenght of the content + 16 bytes for the hash
+            byte[] totalMessage = new byte[1 + 4 + 4 + metadataBytes.Length + ContentLength + 16];
 
             totalMessage[0] = (byte)Type; // set the first byte to the message type
             metadataLengthBuffer.CopyTo(totalMessage, 1); // copy in the metadata length bytes
@@ -78,7 +102,16 @@ namespace StorageShared.Models
             metadataBytes.CopyTo(totalMessage, 1 + 4 + 4); // copy in the metadata
             Content.CopyTo(totalMessage, 1 + 4 + 4 + metadataBytes.Length); // copy in the content
 
-            await stream.WriteAsync(totalMessage, 0, totalMessage.Length);
+            using (MD5 md5 = MD5.Create())
+            {
+                byte[] hashBytes = md5.ComputeHash(totalMessage);
+
+                hashBytes.CopyTo(totalMessage, 1 + 4 + 4 + metadataBytes.Length + ContentLength);
+
+                Console.WriteLine("Writing hash: " + hashBytes.GetAsString());
+
+                await stream.WriteAsync(totalMessage, 0, totalMessage.Length);
+            }
         }
 
         public string GetContentAsString()

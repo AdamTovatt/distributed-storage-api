@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "StorageClient": {
+      "commandName": "Project",
+      "commandLineArgs": "--name first-client --storage-path first-client-storage --api-key test --host localhost --port 25566"
+    }
+  }
+}

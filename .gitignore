@@ -10,3 +10,5 @@
 /DistributedStorageApi/Properties/launchSettings.json
 /AutoUpdater/bin/*
 /AutoUpdater/obj/*
+/FileByteScanner/bin/*
+/FileByteScanner/obj/*

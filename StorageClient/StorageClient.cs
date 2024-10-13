@@ -86,7 +86,15 @@ namespace StorageClient
                 {
                     try
                     {
-                        MessageType messageType = await stream!.ReadMessageTypeAsync();
+                        ReadMessageTypeResult readMessageTypeResult = await stream!.ReadMessageTypeAsync();
+
+                        if (!readMessageTypeResult.Valid)
+                        {
+                            Console.WriteLine($"Invalid message type: {readMessageTypeResult.RawValue}");
+                            continue;
+                        }
+
+                        MessageType messageType = readMessageTypeResult.MessageType!.Value;
 
                         if (messageType != MessageType.NoMessage)
                         {

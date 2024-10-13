@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageShared", "StorageSha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoUpdater", "AutoUpdater\AutoUpdater.csproj", "{152F91A4-8C02-4BA5-89AD-913B29C04811}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileByteScanner", "FileByteScanner\FileByteScanner.csproj", "{9F78F2B8-04CB-4007-8B3C-4C351B991B79}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{152F91A4-8C02-4BA5-89AD-913B29C04811}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F78F2B8-04CB-4007-8B3C-4C351B991B79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F78F2B8-04CB-4007-8B3C-4C351B991B79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F78F2B8-04CB-4007-8B3C-4C351B991B79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F78F2B8-04CB-4007-8B3C-4C351B991B79}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
