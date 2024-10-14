@@ -106,12 +106,7 @@ namespace StorageCoordinator
                                 ReadMessageTypeResult readMessageTypeResult = await client.Stream.ReadMessageTypeAsync();
 
                                 if (!readMessageTypeResult.Valid)
-                                {
-                                    Console.WriteLine($"Invalid message type: {readMessageTypeResult.RawValue}");
                                     continue;
-                                }
-                                else
-                                    Console.WriteLine($"Message type: {readMessageTypeResult.RawValue}");
 
                                 MessageType messageType = readMessageTypeResult.MessageType!.Value;
 
