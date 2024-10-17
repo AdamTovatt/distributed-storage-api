@@ -1,6 +1,4 @@
 using StorageCoordinator;
-using System.Net;
-using System.Net.Sockets;
 
 namespace DistributedStorageApi
 {
@@ -16,6 +14,9 @@ namespace DistributedStorageApi
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // Register the distributed storage service
+            builder.Services.AddHostedService<DistributedStorageService>();  // Register distributed storage as a background service
+
             WebApplication app = builder.Build();
 
             if (app.Environment.IsDevelopment())
@@ -29,23 +30,51 @@ namespace DistributedStorageApi
             app.UseAuthorization();
             app.MapControllers();
 
-            SetupDistributedStorage();
+            //SetupDistributedStorage();
 
             app.Run();
         }
+    }
 
-        private static void SetupDistributedStorage()
+    public class DistributedStorageService : BackgroundService
+    {
+        private StorageServer? _storageServer;
+        private DistributedStorage? _distributedStorage;
+
+        public DistributedStorageService() { }
+
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             string? storageServerPortVariable = Environment.GetEnvironmentVariable("STORAGE_SERVER_PORT");
-            int storageServerPort = storageServerPortVariable != null ? int.Parse(storageServerPortVariable) : 25566; // default to 25566 if no port is set in env variables
+            int storageServerPort = storageServerPortVariable != null ? int.Parse(storageServerPortVariable) : 25566;
 
-            StorageServer storageServer = new StorageServer(storageServerPort);
-            storageServer.StartAcceptingConnections();
+            string? loggingEnabledVariable = Environment.GetEnvironmentVariable("LOG");
+            bool loggingEnabled = loggingEnabledVariable != null ? bool.Parse(loggingEnabledVariable) : true;
 
-            Thread storageServerThread = storageServer.CreateClientAcceptingThread();
-            storageServerThread.Start();
+            StorageShared.Helpers.Logger logger = new StorageShared.Helpers.Logger(loggingEnabled);
+            _storageServer = new StorageServer(storageServerPort, logger);
+            _storageServer.StartAcceptingConnections();
+            _storageServer.StartClientAcceptingThread(stoppingToken);
 
-            distributedStorage = DistributedStorage.Initialize(storageServer, 5120);
+            _distributedStorage = DistributedStorage.Initialize(_storageServer, 5120);
+
+            logger.Log($"Distributed Storage Service started on port {storageServerPort}.");
+
+            // Wait until the application is stopping
+            stoppingToken.Register(OnStopping);
+
+            return Task.CompletedTask;
+        }
+
+        private void OnStopping()
+        {
+            // Gracefully stop accepting new connections and dispose of resources
+            _storageServer?.StopAcceptingConnections();
+        }
+
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            await base.StopAsync(cancellationToken);
         }
     }
 }

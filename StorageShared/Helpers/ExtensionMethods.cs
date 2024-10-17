@@ -6,10 +6,14 @@ namespace StorageShared.Helpers
 {
     public static class ExtensionMethods
     {
-        public static async Task<ReadMessageTypeResult> ReadMessageTypeAsync(this NetworkStream stream)
+        public static async Task<ReadMessageTypeResult> ReadMessageTypeAsync(this NetworkStream stream, CancellationToken? cancellationToken)
         {
             byte[] messageTypeBuffer = new byte[1];
-            await stream.ReadAsync(messageTypeBuffer, 0, messageTypeBuffer.Length);
+
+            if (cancellationToken == null)
+                await stream.ReadAsync(messageTypeBuffer, 0, messageTypeBuffer.Length);
+            else
+                await stream.ReadAsync(messageTypeBuffer, 0, messageTypeBuffer.Length, cancellationToken.Value);
 
             return new ReadMessageTypeResult(messageTypeBuffer[0]);
         }

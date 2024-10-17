@@ -95,7 +95,7 @@ namespace StorageClient
                 {
                     try
                     {
-                        ReadMessageTypeResult readMessageTypeResult = await stream!.ReadMessageTypeAsync();
+                        ReadMessageTypeResult readMessageTypeResult = await stream!.ReadMessageTypeAsync(cancellationToken);
 
                         if (!readMessageTypeResult.Valid)
                         {

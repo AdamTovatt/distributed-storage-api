@@ -4,10 +4,10 @@
     {
         static async Task Main(string[] args)
         {
-            StorageServer server = new StorageServer(25566);
-            server.StartAcceptingConnections();
+            //StorageServer server = new StorageServer(25566);
+            //server.StartAcceptingConnections();
 
-            await server.AcceptClientsAsync();
+            //await server.AcceptClientsAsync();
         }
     }
 }

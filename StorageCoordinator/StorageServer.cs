@@ -19,11 +19,19 @@ namespace StorageCoordinator
         public ReadOnlyCollection<ConnectedClient> Clients => clients.AsReadOnly();
         public ConnectedClient? PrefferdClient { get { if (clients.Count == 0) return null; return clients[0]; } }
 
-        public StorageServer(int port)
+        private Logger logger;
+        private CancellationToken? cancellationToken;
+
+        public StorageServer(int port, Logger? logger = null)
         {
             Port = port;
             clients = new List<ConnectedClient>();
             listener = new TcpListener(IPAddress.Any, Port);
+
+            if (logger != null)
+                this.logger = logger;
+            else
+                this.logger = new Logger(false);
         }
 
         public void StartAcceptingConnections()
@@ -31,19 +39,26 @@ namespace StorageCoordinator
             listener.Start();
         }
 
-        public async Task AcceptClientsAsync(CancellationToken? cancellationToken = null)
+        public void StopAcceptingConnections()
         {
-            while (cancellationToken == null || !cancellationToken.Value.IsCancellationRequested)
+            listener.Stop();
+        }
+
+        public async Task AcceptClientsAsync(CancellationToken cancellationToken)
+        {
+            this.cancellationToken = cancellationToken;
+
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    TcpClient client = await listener.AcceptTcpClientAsync();
+                    TcpClient client = await listener.AcceptTcpClientAsync(cancellationToken);
                     Thread handleClientThread = new Thread(new ParameterizedThreadStart(HandleClient));
                     handleClientThread.Start(client);
                 }
                 catch (Exception exception)
                 {
-                    Console.WriteLine($"Error when accepting client connection: {exception.Message}");
+                    logger.Log($"Error when accepting client connection: {exception.Message}");
                 }
             }
 
@@ -53,17 +68,22 @@ namespace StorageCoordinator
             }
         }
 
-        private void ClientAcceptingThreadstart()
+        private void ClientAcceptingThreadstart(object? cancellationToken)
         {
+            if (cancellationToken == null)
+                throw new Exception("Missing cancellation token when starting client accepting thread");
+
             Task.Run(async () =>
             {
-                await AcceptClientsAsync();
+                await AcceptClientsAsync((CancellationToken)cancellationToken);
             }).Wait();
         }
 
-        public Thread CreateClientAcceptingThread()
+        public Thread StartClientAcceptingThread(CancellationToken cancellationToken)
         {
-            return new Thread(ClientAcceptingThreadstart);
+            Thread thread = new Thread(new ParameterizedThreadStart(ClientAcceptingThreadstart));
+            thread.Start(cancellationToken);
+            return thread;
         }
 
         public async Task Broadcast(Message message)
@@ -99,11 +119,11 @@ namespace StorageCoordinator
 
                     Task.Run(async () =>
                     {
-                        while (true)
+                        while (this.cancellationToken == null || !this.cancellationToken.Value.IsCancellationRequested)
                         {
                             try
                             {
-                                ReadMessageTypeResult readMessageTypeResult = await client.Stream.ReadMessageTypeAsync();
+                                ReadMessageTypeResult readMessageTypeResult = await client.Stream.ReadMessageTypeAsync(cancellationToken);
 
                                 if (!readMessageTypeResult.Valid)
                                     continue;
@@ -143,22 +163,22 @@ namespace StorageCoordinator
 
                                     if (wasClientDisconnect) // client disconnected
                                     {
-                                        Console.WriteLine("A client disconnected");
+                                        logger.Log("A client disconnected");
                                         break;
                                     }
                                     else
                                     {
-                                        Console.WriteLine($"Socket error code: {socketException.SocketErrorCode}");
+                                        logger.Log($"Socket error code: {socketException.SocketErrorCode}");
                                     }
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"IOException: {ioException.Message}");
+                                    logger.Log($"IOException: {ioException.Message}");
                                 }
                             }
                             catch (Exception exception)
                             {
-                                Console.WriteLine($"Error in receiving: {exception.Message}");
+                                logger.Log($"Error in receiving: {exception.Message}");
                             }
                         }
                     }).Wait();
@@ -173,7 +193,7 @@ namespace StorageCoordinator
         {
             try
             {
-                ReadMessageTypeResult readMessageTypeResult = await stream.ReadMessageTypeAsync();
+                ReadMessageTypeResult readMessageTypeResult = await stream.ReadMessageTypeAsync(cancellationToken);
 
                 MessageType? messageType = readMessageTypeResult.MessageType;
                 if (messageType == null || readMessageTypeResult.MessageType != MessageType.Authorization)
@@ -186,7 +206,7 @@ namespace StorageCoordinator
             }
             catch (Exception exception)
             {
-                Console.WriteLine($"Error when reading client information: {exception.Message}");
+                logger.Log($"Error when reading client information: {exception.Message}");
                 return null;
             }
         }
